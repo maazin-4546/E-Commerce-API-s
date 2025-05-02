@@ -1,11 +1,11 @@
 const Users = require("../models/Users");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
+const Orders = require("../models/Order");
+const { find } = require("../services/services");
 
 
 const getAllUsers = async (req, res) => {
     try {
-        const allUsers = await Users.find();
+        const allUsers = await find(Users);
         return res.status(200).send({
             success: true,
             message: "Users fetched successfully",
@@ -22,6 +22,25 @@ const getAllUsers = async (req, res) => {
 };
 
 
+const getAllOrders = async (req, res) => {
+    try {
+        const orders = await find(Orders);
+        return res.status(200).send({
+            success: true,
+            message: "Orders fetched successfully",
+            orders: orders
+        });
+    } catch (error) {
+        console.error(error.message);
+        return res.status(500).send({
+            success: false,
+            message: "Failed to fetch Orders",
+            error: error.message,
+        });
+    }
+};
+
+
 const approveSellers = async (req, res) => {
     try {
         const userId = req.params.id;
@@ -30,7 +49,6 @@ const approveSellers = async (req, res) => {
         const updatedUser = await Users.findByIdAndUpdate(
             userId,
             { isApproved },
-            { new: true }
         );
 
         if (!updatedUser) {
@@ -86,6 +104,7 @@ const deleteUser = async (req, res) => {
     }
 };
 
+
 const allSellers = async (req, res) => {
     try {
         const sellers = await Users.find({ role: 'seller' });
@@ -112,5 +131,5 @@ module.exports = {
     approveSellers,
     deleteUser,
     allSellers,
-
+    getAllOrders
 }

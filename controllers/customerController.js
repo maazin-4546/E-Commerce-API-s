@@ -1,7 +1,8 @@
 const Users = require("../models/Users");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const Products = require("../models/Products");
+
+const { findOne, findById } = require("../services/services");
 
 
 
@@ -13,7 +14,7 @@ const registerUser = async (req, res) => {
             return res.status(400).send({ message: "Name, email, and password are required" });
         }
 
-        let existingUser = await Users.findOne({ email });
+        let existingUser = await findOne(Users, { email });
 
         if (existingUser) {
             return res.status(400).send({ message: "User already registered" });
@@ -50,9 +51,13 @@ const loginUser = async (req, res) => {
             return res.status(400).send({ message: "Both email and password are required" });
         }
 
-        const checkUser = await Users.findOne({ email });
+        const checkUser = await findOne(Users, { email });
         if (!checkUser) {
             return res.status(401).send({ message: "Invalid credentials" });
+        }
+
+        if (!checkUser.isApproved) {
+            return res.status(401).send({ message: "Still not approved by Admin" });
         }
 
         const isPasswordValid = await bcrypt.compare(password, checkUser.password);
@@ -63,7 +68,7 @@ const loginUser = async (req, res) => {
         const token = jwt.sign(
             { userId: checkUser._id, email: checkUser.email },
             process.env.JWT_SECRET,
-            { expiresIn: "12h" }  // Shorter lifespan
+            { expiresIn: "12h" }
         );
 
         res.cookie("token", token, {
@@ -93,72 +98,78 @@ const loginUser = async (req, res) => {
     }
 }
 
-//! --------------- Products --------------------
-
-const getAllProducts = async (req, res) => {
+const logoutUser = async (req, res) => {
     try {
-        // Get all products where the seller is approved
-        const products = await Products.find()
-            .populate({
-                path: 'seller',
-                match: { role: 'seller', isApproved: true },
-                select: 'name email'
-            })
-            .populate('category', 'name');
-
-        // Filter out products whose seller is not approved (populate match may return null)
-        const filteredProducts = products.filter(product => product.seller);
-
-        res.status(200).send({
-            success: true,
-            message: 'All products fetched successfully',
-            products: filteredProducts
+        res.clearCookie('token', {
+            httpOnly: true,
+            secure: true,
         });
+
+        return res.status(200).send({
+            success: true,
+            message: 'Logout successful',
+        });
+
     } catch (error) {
-        console.error(error.message);
-        res.status(500).send({
+        console.error("Logout Error:", error.message);
+        return res.status(500).send({
             success: false,
-            message: 'Failed to fetch products',
-            error: error.message
+            message: 'Logout failed',
+            error: error.message,
         });
     }
 };
 
 
-const getProductsByCategory = async (req, res) => {
+const updateUserProfile = async (req, res) => {
     try {
-        const { id } = req.params;
-        
-        if (!id) {
-            return res.status(400).json({ success: false, message: "Category ID is required" });
+        const userId = req.user._id;
+        const { name, email, password } = req.body;
+
+        if (!name && !email && !password) {
+            return res.status(400).send({ message: "At least one field (name, email, or password) is required to update" });
         }
 
-        const products = await Products.find({ category: id })
-            .populate('category', 'name') 
-            .populate('seller', 'name email') 
-            .sort({ createdAt: -1 });
+        const user = await findById(Users, userId);
+        if (!user) {
+            return res.status(404).send({ message: "User not found" });
+        }
 
-        res.status(200).json({
+        if (name) user.name = name;
+        if (email) user.email = email;
+        if (password) {
+            const hashedPassword = await bcrypt.hash(password, 10);
+            user.password = hashedPassword;
+        }
+
+        await user.save();
+
+        return res.status(200).send({
             success: true,
-            products
+            message: "Profile updated successfully",
+            user: {
+                userId: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+            }
         });
 
     } catch (error) {
-        console.error(error.message);
-        res.status(500).json({
+        console.error("Profile Update Error:", error.message);
+        return res.status(500).send({
             success: false,
-            message: "Failed to fetch products by category",
-            error: error.message
+            message: "Profile update failed",
+            error: error.message,
         });
     }
-};
-
+}
 
 
 
 module.exports = {
     registerUser,
     loginUser,
-    getAllProducts,
-    getProductsByCategory
+    updateUserProfile,
+    logoutUser
 }

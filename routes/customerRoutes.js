@@ -5,8 +5,8 @@ const authorize = require("../middleware/Authorize");
 const {
     registerUser,
     loginUser,
-    getAllProducts,
-    getProductsByCategory
+    updateUserProfile,
+    logoutUser
 } = require("../controllers/customerController");
 
 
@@ -15,9 +15,9 @@ router.post("/register", registerUser)
 
 router.post("/login", loginUser)
 
-router.get("/get-all-products", authorize(['customer']), getAllProducts)
+router.put("/update-profile", authorize(['customer']), updateUserProfile)
 
-router.get('/products/categories/:id', authorize(['customer']), getProductsByCategory);
+router.post('/logout', logoutUser);
 
 
 module.exports = router

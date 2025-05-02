@@ -1,5 +1,6 @@
 const Products = require("../models/Products");
 const Order = require("../models/Order");
+const { findById } = require("../services/services");
 
 
 const createOrder = async (req, res) => {
@@ -135,7 +136,7 @@ const cancelOrder = async (req, res) => {
 const trackOrder = async (req, res) => {
     try {
         const { id } = req.params;
-        const buyerId = req.user._id; 
+        const buyerId = req.user._id;
 
         // Find order by id and check if the logged-in user is the buyer
         const order = await Order.findOne({ _id: id, buyerId });
@@ -170,11 +171,142 @@ const trackOrder = async (req, res) => {
 };
 
 
+const singleOrderDetails = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const order = await findById(Order, id);
+
+        return res.status(200).send({
+            success: true,
+            message: "order fetched successfully",
+            order,
+        });
+    } catch (error) {
+        console.error(error.message);
+        return res.status(500).send({
+            success: false,
+            message: "Failed to fetch order",
+            error: error.message,
+        });
+    }
+};
+
+
+//! -----------------  Seller Order Management------------------------
+
+const getSellerOrders = async (req, res) => {
+    try {
+        const sellerId = req.user._id;
+
+        const orders = await Order.find({ sellerId })
+            .populate('buyerId', 'name email')
+            .populate('items.productId', 'title price images')
+            .sort({ createdAt: -1 });
+
+        res.status(200).send({
+            success: true,
+            message: "Seller orders fetched successfully",
+            orders,
+        });
+
+    } catch (error) {
+        console.error(error.message);
+        res.status(500).send({
+            success: false,
+            message: "Failed to fetch seller orders",
+            error: error.message,
+        });
+    }
+};
+
+
+const updateOrderStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).send({
+                success: false,
+                message: 'Invalid status value'
+            });
+        }
+
+        // Find and update order
+        const updatedOrder = await Order.findByIdAndUpdate(
+            id,
+            { status },
+        );
+
+        if (!updatedOrder) {
+            return res.status(404).send({
+                success: false,
+                message: 'Order not found'
+            });
+        }
+
+        res.status(200).send({
+            success: true,
+            message: 'Order status updated successfully',
+            order: updatedOrder
+        });
+
+    } catch (error) {
+        console.error('Error updating order status:', error.message);
+        res.status(500).send({
+            success: false,
+            message: 'Failed to update order status',
+            error: error.message
+        });
+    }
+};
+
+
+
+const getSingleOrder = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const sellerId = req.user._id;
+
+        // Find order
+        const order = await Order.findOne({ _id: id, sellerId })
+            .populate('buyerId', 'name email')
+            .populate('items.productId', 'title price images')
+            .exec();
+
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                message: 'Order not found'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Order details fetched successfully',
+            order
+        });
+
+    } catch (error) {
+        console.error('Error fetching single order:', error.message);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to fetch order',
+            error: error.message
+        });
+    }
+};
+
 
 
 module.exports = {
     createOrder,
     getBuyerOrders,
     cancelOrder,
-    trackOrder
+    trackOrder,
+    singleOrderDetails,
+    getSellerOrders,
+    updateOrderStatus,
+    getSingleOrder,
 }

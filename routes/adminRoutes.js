@@ -7,11 +7,14 @@ const {
     approveSellers,
     deleteUser,
     allSellers,
+    getAllOrders
 } = require("../controllers/adminController")
 
 
 
 router.get("/all-users", authorize(['admin']), getAllUsers)
+
+router.get("/all-orders", authorize(['admin']), getAllOrders)
 
 router.patch('/approve-user/:id', authorize(['admin']), approveSellers)
 

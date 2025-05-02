@@ -40,6 +40,7 @@ const authorize = (allowedRoles = []) => {
 
             req.user = user;
             next();
+            
         } catch (error) {
             console.error(error.message);
             return res.status(401).send({

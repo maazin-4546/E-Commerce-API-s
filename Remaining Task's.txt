@@ -1,0 +1,35 @@
+ Admin Features:  (Done)
+1.Approve/Reject seller registration
+2.Access to all orders
+PATCH	/api/admin/user/:id/role	Change role (e.g., approve seller)
+
+
+Seller Features:  (Done)
+1.Add/edit/delete products
+2.Filter by category, price, stock
+3.POST	/api/auth/logout Logout user
+
+
+Customer Features: (Done)
+GET	/api/user/profile	Get logged-in user profile
+
+
+Products: (Done)
+1.Browse/search products
+GET	/api/products/:id	Get single product
+PUT	/api/seller/products/:id	Edit product
+DELETE	/api/seller/products/:id	Delete product
+GET	/api/seller/products/:id	Get product details
+
+
+
+Category: (Donee)
+PUT	/api/categories/:id	Update a category
+DELETE	/api/categories/:id	Delete a category
+GET	/api/categories/:id	Get single category
+
+
+
+Order:
+GET	/api/orders/:id	Get order details
+2.View order history
